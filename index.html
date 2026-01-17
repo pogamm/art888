@@ -1,51 +1,72 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Evaluation Chart</title>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      padding: 16px;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background: #f4f6fb;
+      padding: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f4f6fb, #eef2ff);
     }
 
     .card {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
       background: #ffffff;
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      border-radius: 20px;
+      padding: 16px 14px 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
     }
 
     h2 {
-      margin: 0 0 12px;
+      margin: 4px 0 12px;
       text-align: center;
-      color: #1f2937;
+      color: #111827;
       font-size: 18px;
+      font-weight: 700;
     }
 
-    canvas {
-      width: 100% !important;
-      height: 220px !important;
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 260px;
+    }
+
+    @media (max-width: 360px) {
+      .chart-wrapper {
+        height: 220px;
+      }
+      h2 {
+        font-size: 16px;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <div class="card">
     <h2>ผลการประเมินของคุณ</h2>
-    <canvas id="myChart"></canvas>
+    <div class="chart-wrapper">
+      <canvas id="myChart"></canvas>
+    </div>
   </div>
 
   <script>
     function drawChart() {
-      // 🔹 รับค่าจาก Thunkable (Query String)
       const params = new URLSearchParams(window.location.search);
 
       const energy = Number(params.get('a')) || 0;
@@ -54,49 +75,84 @@
       const life   = Number(params.get('d')) || 0;
       const total  = Number(params.get('t')) || 0;
 
+      const values = [energy, mind, focus, life, total];
+      const avg = values.reduce((a,b)=>a+b,0) / values.length;
+
       const ctx = document.getElementById('myChart').getContext('2d');
 
+      const totalGradient = ctx.createLinearGradient(0, 0, 0, 300);
+      totalGradient.addColorStop(0, '#60A5FA');
+      totalGradient.addColorStop(1, '#1E3A8A');
+
       new Chart(ctx, {
-        type: 'bar',
         data: {
           labels: ['Energy', 'Mind', 'Focus', 'Life', 'Total'],
-          datasets: [{
-            label: 'Score',
-            data: [energy, mind, focus, life, total],
-            backgroundColor: [
-              '#60A5FA',
-              '#34D399',
-              '#A78BFA',
-              '#FB923C',
-              '#1E3A8A'
-            ],
-            borderRadius: 10
-          }]
+          datasets: [
+            {
+              type: 'bar',
+              data: values,
+              backgroundColor: [
+                '#60A5FA',
+                '#34D399',
+                '#A78BFA',
+                '#FB923C',
+                totalGradient
+              ],
+              borderRadius: 14,
+              barThickness: 'flex'
+            },
+            {
+              type: 'line',
+              data: Array(5).fill(avg),
+              borderColor: '#EF4444',
+              borderWidth: 2,
+              borderDash: [6,6],
+              pointRadius: 0
+            }
+          ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { display: false }
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#111827',
+              font: {
+                weight: 'bold',
+                size: 12
+              }
+            }
           },
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { stepSize: 10 }
+              max: 100,
+              ticks: {
+                stepSize: 20,
+                color: '#6B7280'
+              }
             },
             x: {
+              ticks: {
+                color: '#374151',
+                font: { weight: '600' }
+              },
               grid: { display: false }
             }
           },
           animation: {
-            duration: 1000,
+            duration: 1200,
             easing: 'easeOutQuart'
           }
-        }
+        },
+        plugins: [ChartDataLabels]
       });
     }
 
-    // ✅ สำคัญมากสำหรับ Thunkable WebViewer
+    // สำคัญมากสำหรับ WebViewer
     window.onload = () => {
       setTimeout(drawChart, 300);
     };
