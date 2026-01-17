@@ -1,78 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Health Chart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluation Chart</title>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     body {
       margin: 0;
-      font-family: sans-serif;
-      background: #fff;
+      padding: 16px;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f4f6fb;
     }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      text-align: center;
+      color: #1f2937;
+      font-size: 18px;
+    }
+
     canvas {
-      max-width: 100%;
+      width: 100% !important;
+      height: 220px !important;
     }
   </style>
 </head>
 <body>
 
-<canvas id="healthChart"></canvas>
+  <div class="card">
+    <h2>ผลการประเมินของคุณ</h2>
+    <canvas id="myChart"></canvas>
+  </div>
 
-<script>
-let chart;
+  <script>
+    function drawChart() {
+      // 🔹 รับค่าจาก Thunkable (Query String)
+      const params = new URLSearchParams(window.location.search);
 
-function drawChart(data) {
-  const ctx = document.getElementById('healthChart').getContext('2d');
+      const energy = Number(params.get('a')) || 0;
+      const mind   = Number(params.get('b')) || 0;
+      const focus  = Number(params.get('c')) || 0;
+      const life   = Number(params.get('d')) || 0;
+      const total  = Number(params.get('t')) || 0;
 
-  if (chart) {
-    chart.destroy();
-  }
+      const ctx = document.getElementById('myChart').getContext('2d');
 
-  chart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Energy', 'Mind', 'Focus', 'Life', 'Total'],
-      datasets: [{
-        label: 'คะแนนวันนี้',
-        data: [
-          data.energy,
-          data.mind,
-          data.focus,
-          data.life,
-          data.total
-        ],
-        backgroundColor: [
-          '#4F8EF7',
-          '#F25F5C',
-          '#FFE066',
-          '#70C1B3',
-          '#FF9F1C'
-        ]
-      }]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: {
-          min: 0,
-          max: 40
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Energy', 'Mind', 'Focus', 'Life', 'Total'],
+          datasets: [{
+            label: 'Score',
+            data: [energy, mind, focus, life, total],
+            backgroundColor: [
+              '#60A5FA',
+              '#34D399',
+              '#A78BFA',
+              '#FB923C',
+              '#1E3A8A'
+            ],
+            borderRadius: 10
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 10 }
+            },
+            x: {
+              grid: { display: false }
+            }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          }
         }
-      }
+      });
     }
-  });
-}
 
-/* รับข้อมูลจาก Thunkable */
-window.addEventListener('message', function (event) {
-  try {
-    const data = JSON.parse(event.data);
-    drawChart(data);
-  } catch (e) {
-    console.log('Invalid message', e);
-  }
-});
-</script>
+    // ✅ สำคัญมากสำหรับ Thunkable WebViewer
+    window.onload = () => {
+      setTimeout(drawChart, 300);
+    };
+  </script>
 
 </body>
 </html>
