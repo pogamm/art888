@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Health Dashboard</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f6fb;
+      padding: 16px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.08);
+    }
+    h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>แผนภูมิสุขภาวะวันนี้</h2>
+  <canvas id="chart"></canvas>
+</div>
+
+<div class="card">
+  <h2>สรุปอัตโนมัติ</h2>
+  <pre id="summary"></pre>
+</div>
+
+<script>
+/* ======================
+   1) รับค่าจาก Thunkable
+   ====================== */
+const p = new URLSearchParams(location.search);
+
+const energy = Number(p.get("energy")) || 0;
+const mind   = Number(p.get("mind")) || 0;
+const focus  = Number(p.get("focus")) || 0;
+const life   = Number(p.get("life")) || 0;
+const total  = Number(p.get("total")) || 0;
+
+/* ======================
+   2) วาดแผนภูมิแท่ง
+   ====================== */
+new Chart(document.getElementById("chart"), {
+  type: "bar",
+  data: {
+    labels: ["Energy", "Mind", "Focus", "Life", "Total"],
+    datasets: [{
+      data: [energy, mind, focus, life, total],
+      backgroundColor: [
+        "#60A5FA", "#F87171", "#FBBF24", "#34D399", "#FB923C"
+      ],
+      borderRadius: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, max: 40 }
+    }
+  }
+});
+
+/* ======================
+   3) วิเคราะห์เป็นข้อความ
+   ====================== */
+function level(v, name) {
+  if (v >= 8) return `${name}: ดีมาก 👍`;
+  if (v >= 5) return `${name}: ปานกลาง 🙂`;
+  return `${name}: ค่อนข้างต่ำ ⚠️`;
+}
+
+let text =
+`สรุปสุขภาวะของคุณวันนี้
+
+${level(energy,"พลังงาน")}
+${level(mind,"จิตใจ")}
+${level(focus,"สมาธิ")}
+${level(life,"คุณภาพชีวิต")}
+
+สุขภาพรวม: ${total}/40
+`;
+
+document.getElementById("summary").innerText = text;
+
+/* ======================
+   4) ส่งกลับเข้า Thunkable
+   ====================== */
+if (window.Thunks) {
+  Thunks.sendMessage(text);
+}
+</script>
+
+</body>
+</html>
