@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Daily Comparison</title>
+<title>Daily Summary</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -19,42 +19,52 @@
     max-width: 520px;
     margin: auto;
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 18px;
     padding: 16px;
     box-shadow: 0 10px 25px rgba(0,0,0,.08);
   }
 
   h2 {
     text-align: center;
-    margin-bottom: 8px;
     font-size: 18px;
+    margin-bottom: 8px;
     color: #111827;
   }
 
   canvas {
     width: 100% !important;
-    height: 240px !important;
+    height: 220px !important;
   }
 
-  .compare {
+  .summary {
     margin-top: 12px;
-    text-align: center;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f9fafb;
     font-size: 14px;
-    font-weight: 600;
+    line-height: 1.6;
+    color: #1f2937;
   }
 
-  .good { color: #16a34a; }
-  .bad { color: #dc2626; }
-  .neutral { color: #6b7280; }
+  .tip {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #eef2ff;
+    font-size: 14px;
+    color: #1e3a8a;
+  }
 </style>
 </head>
 
 <body>
 
 <div class="card">
-  <h2>แนวโน้มรายวัน</h2>
+  <h2>สรุปผลของวันนี้</h2>
   <canvas id="chart"></canvas>
-  <div id="compareText" class="compare"></div>
+
+  <div id="summaryText" class="summary"></div>
+  <div id="tipText" class="tip"></div>
 </div>
 
 <script>
@@ -62,80 +72,64 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
 
     const params = new URLSearchParams(window.location.search);
-    const rawHistory = params.get("history");
 
-    let history = [];
-    try {
-      history = rawHistory ? JSON.parse(rawHistory) : [];
-      if (!Array.isArray(history)) history = [];
-    } catch (e) {
-      history = [];
-    }
+    const energy = Number(params.get("a")) || 0;
+    const mind   = Number(params.get("b")) || 0;
+    const focus  = Number(params.get("c")) || 0;
+    const life   = Number(params.get("d")) || 0;
 
-    const compareText = document.getElementById("compareText");
+    const values = [energy, mind, focus, life];
+    const labels = ["Energy", "Mind", "Focus", "Life"];
 
-    // ถ้ายังไม่มีข้อมูล
-    if (history.length === 0) {
-      compareText.innerHTML =
-        "<span class='neutral'>ยังไม่มีข้อมูลย้อนหลัง</span>";
-      return;
-    }
+    const avg = values.reduce((a,b)=>a+b,0) / values.length;
 
-    // จำกัด 7 วัน (กันพลาด)
-    if (history.length > 7) {
-      history = history.slice(-7);
-    }
-
-    const labels = history.map((_, i) => `Day ${i + 1}`);
-
-    const canvas = document.getElementById("chart");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-
+    // วาดกราฟ
+    const ctx = document.getElementById("chart").getContext("2d");
     new Chart(ctx, {
-      type: "line",
+      type: "bar",
       data: {
         labels,
         datasets: [{
-          data: history,
-          borderColor: "#2563eb",
-          backgroundColor: "rgba(37,99,235,.2)",
-          tension: 0.4,
-          fill: true,
-          pointRadius: 5,
-          pointBackgroundColor: "#1e40af"
+          data: values,
+          backgroundColor: ["#60A5FA","#34D399","#A78BFA","#FB923C"],
+          borderRadius: 12
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        scales: { y: { beginAtZero: true, max: 10 } }
       }
     });
 
-    // 🔁 เปรียบเทียบวันต่อวัน
-    if (history.length >= 2) {
-      const today = history[history.length - 1];
-      const yesterday = history[history.length - 2];
-      const diff = today - yesterday;
-
-      if (diff > 0) {
-        compareText.innerHTML =
-          `<span class="good">วันนี้ดีขึ้น +${diff} คะแนน 📈</span>`;
-      } else if (diff < 0) {
-        compareText.innerHTML =
-          `<span class="bad">วันนี้ลดลง ${Math.abs(diff)} คะแนน 📉</span>`;
-      } else {
-        compareText.innerHTML =
-          `<span class="neutral">วันนี้เท่ากับเมื่อวาน ⚖️</span>`;
-      }
+    // 🧠 สรุปผล
+    const summaryText = document.getElementById("summaryText");
+    if (avg >= 7) {
+      summaryText.innerHTML =
+        "วันนี้ภาพรวมของคุณอยู่ในระดับที่ดี ร่างกายและจิตใจค่อนข้างสมดุล เหมาะกับการทำงานหรือทำกิจกรรมที่ต้องใช้สมาธิ";
+    } else if (avg >= 4) {
+      summaryText.innerHTML =
+        "วันนี้ภาพรวมอยู่ในระดับปานกลาง มีบางด้านที่ยังอ่อนล้า ควรจัดลำดับความสำคัญและพักเป็นช่วง ๆ";
     } else {
-      compareText.innerHTML =
-        "<span class='neutral'>ยังไม่มีข้อมูลพอสำหรับการเปรียบเทียบ</span>";
+      summaryText.innerHTML =
+        "วันนี้ร่างกายหรือจิตใจอาจล้าค่อนข้างมาก แนะนำให้ลดภาระและให้เวลากับการพักผ่อนมากขึ้น";
     }
 
-  }, 400); // 👈 สำคัญมากสำหรับ Thunkable WebViewer
+    // 💡 คำแนะนำ
+    const tipText = document.getElementById("tipText");
+    const minIndex = values.indexOf(Math.min(...values));
+
+    const tips = [
+      "ลองนอนให้เร็วขึ้นหรือขยับร่างกายเบา ๆ เพื่อเพิ่มพลังงาน",
+      "หาเวลาผ่อนคลาย เช่น ฟังเพลง หรืออยู่กับตัวเองสักพัก",
+      "แบ่งงานเป็นช่วงสั้น ๆ และพักสายตาระหว่างวัน",
+      "ดูแลสมดุลชีวิต เช่น เวลาพัก เวลากับคนรอบข้าง"
+    ];
+
+    tipText.innerHTML = "คำแนะนำวันนี้: " + tips[minIndex];
+
+  }, 300);
 });
 </script>
 
