@@ -2,21 +2,23 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Weekly Comparison</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Comparison</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
   body {
-    font-family: sans-serif;
-    background: #f4f6fb;
     margin: 0;
     padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f4f6fb;
   }
 
   .card {
-    background: #fff;
+    max-width: 520px;
+    margin: auto;
+    background: #ffffff;
     border-radius: 16px;
     padding: 16px;
     box-shadow: 0 10px 25px rgba(0,0,0,.08);
@@ -25,22 +27,25 @@
   h2 {
     text-align: center;
     margin-bottom: 8px;
+    font-size: 18px;
+    color: #111827;
   }
-
-  .compare {
-    margin-top: 12px;
-    font-size: 14px;
-    text-align: center;
-  }
-
-  .good { color: #16a34a; }
-  .bad { color: #dc2626; }
-  .neutral { color: #6b7280; }
 
   canvas {
     width: 100% !important;
     height: 240px !important;
   }
+
+  .compare {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .good { color: #16a34a; }
+  .bad { color: #dc2626; }
+  .neutral { color: #6b7280; }
 </style>
 </head>
 
@@ -53,72 +58,85 @@
 </div>
 
 <script>
-const params = new URLSearchParams(window.location.search);
-const rawHistory = params.get("history");
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => {
 
-// แปลง historyScores
-let history = [];
-try {
-  history = rawHistory ? JSON.parse(rawHistory) : [];
-} catch {
-  history = [];
-}
+    const params = new URLSearchParams(window.location.search);
+    const rawHistory = params.get("history");
 
-// จำกัดไม่เกิน 7 วัน (กันพลาด)
-if (history.length > 7) {
-  history = history.slice(-7);
-}
+    let history = [];
+    try {
+      history = rawHistory ? JSON.parse(rawHistory) : [];
+      if (!Array.isArray(history)) history = [];
+    } catch (e) {
+      history = [];
+    }
 
-// labels ตามจำนวนวันจริง
-const labels = history.map((_, i) => `Day ${i + 1}`);
+    const compareText = document.getElementById("compareText");
 
-// วาดกราฟ
-const ctx = document.getElementById("chart").getContext("2d");
-new Chart(ctx, {
-  type: "line",
-  data: {
-    labels,
-    datasets: [{
-      label: "Total Score",
-      data: history,
-      borderColor: "#2563eb",
-      backgroundColor: "rgba(37,99,235,.2)",
-      tension: 0.4,
-      fill: true,
-      pointRadius: 5,
-      pointBackgroundColor: "#1e40af"
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true } }
-  }
+    // ถ้ายังไม่มีข้อมูล
+    if (history.length === 0) {
+      compareText.innerHTML =
+        "<span class='neutral'>ยังไม่มีข้อมูลย้อนหลัง</span>";
+      return;
+    }
+
+    // จำกัด 7 วัน (กันพลาด)
+    if (history.length > 7) {
+      history = history.slice(-7);
+    }
+
+    const labels = history.map((_, i) => `Day ${i + 1}`);
+
+    const canvas = document.getElementById("chart");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          data: history,
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37,99,235,.2)",
+          tension: 0.4,
+          fill: true,
+          pointRadius: 5,
+          pointBackgroundColor: "#1e40af"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    // 🔁 เปรียบเทียบวันต่อวัน
+    if (history.length >= 2) {
+      const today = history[history.length - 1];
+      const yesterday = history[history.length - 2];
+      const diff = today - yesterday;
+
+      if (diff > 0) {
+        compareText.innerHTML =
+          `<span class="good">วันนี้ดีขึ้น +${diff} คะแนน 📈</span>`;
+      } else if (diff < 0) {
+        compareText.innerHTML =
+          `<span class="bad">วันนี้ลดลง ${Math.abs(diff)} คะแนน 📉</span>`;
+      } else {
+        compareText.innerHTML =
+          `<span class="neutral">วันนี้เท่ากับเมื่อวาน ⚖️</span>`;
+      }
+    } else {
+      compareText.innerHTML =
+        "<span class='neutral'>ยังไม่มีข้อมูลพอสำหรับการเปรียบเทียบ</span>";
+    }
+
+  }, 400); // 👈 สำคัญมากสำหรับ Thunkable WebViewer
 });
-
-// 🔁 เปรียบเทียบวันต่อวัน
-const compareText = document.getElementById("compareText");
-
-if (history.length < 2) {
-  compareText.innerHTML =
-    `<span class="neutral">ยังไม่มีข้อมูลพอสำหรับการเปรียบเทียบ</span>`;
-} else {
-  const today = history[history.length - 1];
-  const yesterday = history[history.length - 2];
-  const diff = today - yesterday;
-
-  if (diff > 0) {
-    compareText.innerHTML =
-      `<span class="good">วันนี้ดีขึ้น +${diff} คะแนน จากเมื่อวาน 📈</span>`;
-  } else if (diff < 0) {
-    compareText.innerHTML =
-      `<span class="bad">วันนี้ลดลง ${Math.abs(diff)} คะแนน จากเมื่อวาน 📉</span>`;
-  } else {
-    compareText.innerHTML =
-      `<span class="neutral">วันนี้เท่ากับเมื่อวาน ⚖️</span>`;
-  }
-}
 </script>
 
 </body>
