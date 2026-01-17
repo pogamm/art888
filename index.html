@@ -2,41 +2,37 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Evaluation Chart</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluation Report</title>
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
       padding: 12px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: linear-gradient(180deg, #f4f6fb, #eef2ff);
+      background: linear-gradient(180deg,#f4f6fb,#eef2ff);
     }
 
     .card {
-      width: 100%;
-      max-width: 480px;
-      margin: 0 auto;
-      background: #ffffff;
+      max-width: 520px;
+      margin: 0 auto 16px;
+      background: #fff;
       border-radius: 20px;
-      padding: 16px 14px 20px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.08);
     }
 
     h2 {
       margin: 4px 0 12px;
       text-align: center;
-      color: #111827;
       font-size: 18px;
       font-weight: 700;
+      color: #111827;
     }
 
     .chart-wrapper {
@@ -45,118 +41,167 @@
       height: 260px;
     }
 
-    @media (max-width: 360px) {
-      .chart-wrapper {
-        height: 220px;
-      }
-      h2 {
-        font-size: 16px;
-      }
+    .summary {
+      margin-top: 12px;
+      padding: 14px;
+      background: #f9fafb;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #1f2937;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .good { background:#dcfce7; color:#166534; }
+    .mid  { background:#fef3c7; color:#92400e; }
+    .bad  { background:#fee2e2; color:#991b1b; }
+
+    @media (max-width:360px) {
+      .chart-wrapper { height:220px; }
+      h2 { font-size:16px; }
     }
   </style>
 </head>
 
 <body>
 
-  <div class="card">
-    <h2>ผลการประเมินของคุณ</h2>
-    <div class="chart-wrapper">
-      <canvas id="myChart"></canvas>
-    </div>
+<!-- DAILY -->
+<div class="card">
+  <h2>ผลการประเมินวันนี้</h2>
+  <div class="chart-wrapper">
+    <canvas id="dailyChart"></canvas>
   </div>
+  <div id="dailySummary" class="summary"></div>
+</div>
 
-  <script>
-    function drawChart() {
-      const params = new URLSearchParams(window.location.search);
+<!-- WEEKLY -->
+<div class="card" id="weeklyCard" style="display:none">
+  <h2>สรุปรายสัปดาห์</h2>
+  <div class="chart-wrapper">
+    <canvas id="weeklyChart"></canvas>
+  </div>
+  <div id="weeklySummary" class="summary"></div>
+</div>
 
-      const energy = Number(params.get('a')) || 0;
-      const mind   = Number(params.get('b')) || 0;
-      const focus  = Number(params.get('c')) || 0;
-      const life   = Number(params.get('d')) || 0;
-      const total  = Number(params.get('t')) || 0;
+<script>
+const params = new URLSearchParams(window.location.search);
 
-      const values = [energy, mind, focus, life, total];
-      const avg = values.reduce((a,b)=>a+b,0) / values.length;
+// ===== DAILY DATA =====
+const energy = Number(params.get('a')) || 0;
+const mind   = Number(params.get('b')) || 0;
+const focus  = Number(params.get('c')) || 0;
+const life   = Number(params.get('d')) || 0;
+const total  = Number(params.get('t')) || 0;
 
-      const ctx = document.getElementById('myChart').getContext('2d');
+// ===== AI SUMMARY (DAILY) =====
+function dailyInsight(total) {
+  if (total >= 80) return {text:"วันนี้คุณอยู่ในช่วงที่ดีมาก ทั้งพลังงานและสมดุลชีวิตอยู่ในระดับน่าพอใจ ควรรักษาพฤติกรรมแบบนี้ไว้ต่อเนื่อง", cls:"good"};
+  if (total >= 60) return {text:"ภาพรวมวันนี้ถือว่าอยู่ในระดับปานกลาง มีบางด้านที่ยังพัฒนาได้ ลองพักผ่อนหรือโฟกัสสิ่งสำคัญให้มากขึ้น", cls:"mid"};
+  return {text:"วันนี้ร่างกายหรือจิตใจอาจล้าเกินไป แนะนำให้ลดภาระ พักผ่อน และดูแลตัวเองเป็นพิเศษ", cls:"bad"};
+}
 
-      const totalGradient = ctx.createLinearGradient(0, 0, 0, 300);
-      totalGradient.addColorStop(0, '#60A5FA');
-      totalGradient.addColorStop(1, '#1E3A8A');
+// ===== DRAW DAILY CHART =====
+function drawDaily() {
+  const values = [energy,mind,focus,life,total];
+  const avg = values.reduce((a,b)=>a+b,0)/values.length;
+  const ctx = document.getElementById('dailyChart').getContext('2d');
 
-      new Chart(ctx, {
-        data: {
-          labels: ['Energy', 'Mind', 'Focus', 'Life', 'Total'],
-          datasets: [
-            {
-              type: 'bar',
-              data: values,
-              backgroundColor: [
-                '#60A5FA',
-                '#34D399',
-                '#A78BFA',
-                '#FB923C',
-                totalGradient
-              ],
-              borderRadius: 14,
-              barThickness: 'flex'
-            },
-            {
-              type: 'line',
-              data: Array(5).fill(avg),
-              borderColor: '#EF4444',
-              borderWidth: 2,
-              borderDash: [6,6],
-              pointRadius: 0
-            }
-          ]
+  new Chart(ctx,{
+    data:{
+      labels:['Energy','Mind','Focus','Life','Total'],
+      datasets:[
+        {
+          type:'bar',
+          data:values,
+          backgroundColor:['#60A5FA','#34D399','#A78BFA','#FB923C','#1E3A8A'],
+          borderRadius:14
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            datalabels: {
-              anchor: 'end',
-              align: 'top',
-              color: '#111827',
-              font: {
-                weight: 'bold',
-                size: 12
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              ticks: {
-                stepSize: 20,
-                color: '#6B7280'
-              }
-            },
-            x: {
-              ticks: {
-                color: '#374151',
-                font: { weight: '600' }
-              },
-              grid: { display: false }
-            }
-          },
-          animation: {
-            duration: 1200,
-            easing: 'easeOutQuart'
-          }
-        },
-        plugins: [ChartDataLabels]
-      });
+        {
+          type:'line',
+          data:Array(5).fill(avg),
+          borderColor:'#EF4444',
+          borderDash:[6,6],
+          pointRadius:0
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          anchor:'end',
+          align:'top',
+          font:{weight:'bold'}
+        }
+      },
+      scales:{
+        y:{beginAtZero:true,max:100}
+      }
+    },
+    plugins:[ChartDataLabels]
+  });
+
+  const insight = dailyInsight(total);
+  document.getElementById("dailySummary").innerHTML =
+    insight.text + `<br><span class="badge ${insight.cls}">คะแนนรวม ${total}</span>`;
+}
+
+// ===== WEEKLY =====
+function drawWeekly() {
+  const raw = params.get('week');
+  if (!raw) return;
+
+  const weekData = JSON.parse(raw);
+  document.getElementById("weeklyCard").style.display = "block";
+
+  const avg = weekData.reduce((a,b)=>a+b,0)/weekData.length;
+  const trend =
+    weekData[6] > weekData[0] ? "แนวโน้มดีขึ้นอย่างต่อเนื่อง" :
+    weekData[6] < weekData[0] ? "แนวโน้มลดลง ควรทบทวนพฤติกรรม" :
+    "แนวโน้มคงที่";
+
+  new Chart(document.getElementById('weeklyChart'),{
+    type:'line',
+    data:{
+      labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      datasets:[{
+        data:weekData,
+        borderColor:'#3B82F6',
+        backgroundColor:'rgba(59,130,246,.2)',
+        tension:.4,
+        fill:true,
+        pointRadius:4
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,max:100}}
     }
+  });
 
-    // สำคัญมากสำหรับ WebViewer
-    window.onload = () => {
-      setTimeout(drawChart, 300);
-    };
-  </script>
+  document.getElementById("weeklySummary").innerHTML =
+    `ค่าเฉลี่ยทั้งสัปดาห์: <b>${avg.toFixed(1)}</b><br>${trend}`;
+}
+
+window.onload = () => {
+  setTimeout(()=>{
+    drawDaily();
+    drawWeekly();
+  },300);
+};
+</script>
 
 </body>
 </html>
