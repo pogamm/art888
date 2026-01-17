@@ -1,106 +1,78 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Health Chart</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: sans-serif;
       margin: 0;
-      padding: 16px;
-      background: #f5f5f5;
+      font-family: sans-serif;
+      background: #fff;
     }
     canvas {
-      background: white;
-      border-radius: 12px;
-      padding: 12px;
-    }
-    #summary {
-      background: white;
-      margin-top: 16px;
-      padding: 16px;
-      border-radius: 12px;
-      font-size: 16px;
+      max-width: 100%;
     }
   </style>
 </head>
-
 <body>
 
-  <canvas id="healthChart" height="200"></canvas>
+<canvas id="healthChart"></canvas>
 
-  <div id="summary">
-    รอข้อมูลจากแอป...
-  </div>
+<script>
+let chart;
 
-  <script>
-    let chart;
+function drawChart(data) {
+  const ctx = document.getElementById('healthChart').getContext('2d');
 
-    function analyze(label, value) {
-      if (value >= 7) return `${label}: ดีมาก 👍`;
-      if (value >= 4) return `${label}: ปานกลาง 🙂`;
-      return `${label}: ควรดูแลเพิ่ม ⚠️`;
-    }
+  if (chart) {
+    chart.destroy();
+  }
 
-    function receiveFromThunkable(message) {
-      const data = JSON.parse(message);
-
-      const values = [
-        data.energy,
-        data.mind,
-        data.focus,
-        data.life,
-        data.total
-      ];
-
-      const labels = ["Energy", "Mind", "Focus", "Life", "Total"];
-
-      // ====== วาดกราฟ ======
-      if (chart) chart.destroy();
-
-      chart = new Chart(document.getElementById("healthChart"), {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [{
-            label: "คะแนนสุขภาวะ",
-            data: values,
-            backgroundColor: [
-              "#4e79a7",
-              "#e15759",
-              "#f1ce63",
-              "#59a14f",
-              "#ff9d00"
-            ]
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              min: 0,
-              max: 40
-            }
-          }
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Energy', 'Mind', 'Focus', 'Life', 'Total'],
+      datasets: [{
+        label: 'คะแนนวันนี้',
+        data: [
+          data.energy,
+          data.mind,
+          data.focus,
+          data.life,
+          data.total
+        ],
+        backgroundColor: [
+          '#4F8EF7',
+          '#F25F5C',
+          '#FFE066',
+          '#70C1B3',
+          '#FF9F1C'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          min: 0,
+          max: 40
         }
-      });
-
-      // ====== สรุปข้อความ ======
-      document.getElementById("summary").innerHTML = `
-        <b>สรุปอัตโนมัติ</b><br><br>
-        ${analyze("พลังงาน", data.energy)}<br>
-        ${analyze("จิตใจ", data.mind)}<br>
-        ${analyze("สมาธิ", data.focus)}<br>
-        ${analyze("ชีวิต", data.life)}<br><br>
-        <b>สุขภาวะรวม:</b> ${data.total}/40
-      `;
+      }
     }
+  });
+}
 
-    // สำหรับ JavaScript Web Bridge
-    window.addEventListener("message", (e) => {
-      receiveFromThunkable(e.data);
-    });
-  </script>
+/* รับข้อมูลจาก Thunkable */
+window.addEventListener('message', function (event) {
+  try {
+    const data = JSON.parse(event.data);
+    drawChart(data);
+  } catch (e) {
+    console.log('Invalid message', e);
+  }
+});
+</script>
 
 </body>
 </html>
