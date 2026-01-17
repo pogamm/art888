@@ -1,108 +1,106 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>Health Dashboard</title>
-
-  <!-- Chart.js -->
+  <meta charset="UTF-8" />
+  <title>Health Chart</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <style>
     body {
       font-family: sans-serif;
-      background: #f4f6fb;
+      margin: 0;
       padding: 16px;
+      background: #f5f5f5;
     }
-    .card {
+    canvas {
       background: white;
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 8px 20px rgba(0,0,0,.08);
+      border-radius: 12px;
+      padding: 12px;
     }
-    h2 {
-      margin-top: 0;
-      text-align: center;
+    #summary {
+      background: white;
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 16px;
     }
   </style>
 </head>
+
 <body>
 
-<div class="card">
-  <h2>แผนภูมิสุขภาวะวันนี้</h2>
-  <canvas id="chart"></canvas>
-</div>
+  <canvas id="healthChart" height="200"></canvas>
 
-<div class="card">
-  <h2>สรุปอัตโนมัติ</h2>
-  <pre id="summary"></pre>
-</div>
+  <div id="summary">
+    รอข้อมูลจากแอป...
+  </div>
 
-<script>
-/* ======================
-   1) รับค่าจาก Thunkable
-   ====================== */
-const p = new URLSearchParams(location.search);
+  <script>
+    let chart;
 
-const energy = Number(p.get("energy")) || 0;
-const mind   = Number(p.get("mind")) || 0;
-const focus  = Number(p.get("focus")) || 0;
-const life   = Number(p.get("life")) || 0;
-const total  = Number(p.get("total")) || 0;
-
-/* ======================
-   2) วาดแผนภูมิแท่ง
-   ====================== */
-new Chart(document.getElementById("chart"), {
-  type: "bar",
-  data: {
-    labels: ["Energy", "Mind", "Focus", "Life", "Total"],
-    datasets: [{
-      data: [energy, mind, focus, life, total],
-      backgroundColor: [
-        "#60A5FA", "#F87171", "#FBBF24", "#34D399", "#FB923C"
-      ],
-      borderRadius: 10
-    }]
-  },
-  options: {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { beginAtZero: true, max: 40 }
+    function analyze(label, value) {
+      if (value >= 7) return `${label}: ดีมาก 👍`;
+      if (value >= 4) return `${label}: ปานกลาง 🙂`;
+      return `${label}: ควรดูแลเพิ่ม ⚠️`;
     }
-  }
-});
 
-/* ======================
-   3) วิเคราะห์เป็นข้อความ
-   ====================== */
-function level(v, name) {
-  if (v >= 8) return `${name}: ดีมาก 👍`;
-  if (v >= 5) return `${name}: ปานกลาง 🙂`;
-  return `${name}: ค่อนข้างต่ำ ⚠️`;
-}
+    function receiveFromThunkable(message) {
+      const data = JSON.parse(message);
 
-let text =
-`สรุปสุขภาวะของคุณวันนี้
+      const values = [
+        data.energy,
+        data.mind,
+        data.focus,
+        data.life,
+        data.total
+      ];
 
-${level(energy,"พลังงาน")}
-${level(mind,"จิตใจ")}
-${level(focus,"สมาธิ")}
-${level(life,"คุณภาพชีวิต")}
+      const labels = ["Energy", "Mind", "Focus", "Life", "Total"];
 
-สุขภาพรวม: ${total}/40
-`;
+      // ====== วาดกราฟ ======
+      if (chart) chart.destroy();
 
-document.getElementById("summary").innerText = text;
+      chart = new Chart(document.getElementById("healthChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "คะแนนสุขภาวะ",
+            data: values,
+            backgroundColor: [
+              "#4e79a7",
+              "#e15759",
+              "#f1ce63",
+              "#59a14f",
+              "#ff9d00"
+            ]
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              min: 0,
+              max: 40
+            }
+          }
+        }
+      });
 
-/* ======================
-   4) ส่งกลับเข้า Thunkable
-   ====================== */
-if (window.Thunks) {
-  Thunks.sendMessage(text);
-}
-</script>
+      // ====== สรุปข้อความ ======
+      document.getElementById("summary").innerHTML = `
+        <b>สรุปอัตโนมัติ</b><br><br>
+        ${analyze("พลังงาน", data.energy)}<br>
+        ${analyze("จิตใจ", data.mind)}<br>
+        ${analyze("สมาธิ", data.focus)}<br>
+        ${analyze("ชีวิต", data.life)}<br><br>
+        <b>สุขภาวะรวม:</b> ${data.total}/40
+      `;
+    }
+
+    // สำหรับ JavaScript Web Bridge
+    window.addEventListener("message", (e) => {
+      receiveFromThunkable(e.data);
+    });
+  </script>
 
 </body>
 </html>
